@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Photos
 
 @Observable
 final class TwistViewModel {
@@ -7,23 +8,25 @@ final class TwistViewModel {
     var moves: Int = 0
     var matches: Int = 0
     var isSolved: Bool = false
+    var selectedAssets: [PHAsset] = []
     
     func select(index: Int) {
         guard !state.tiles[index].isRevealed, !state.tiles[index].isMatched else { return }
         
+        if SettingsStore.shared.hapticsEnabled {
+            HapticManager.shared.impact(style: .medium)
+        }
+
         if let first = state.firstSelectionIndex, let _ = state.secondSelectionIndex {
-            // Already have two revealed, hide them and start new
             hideUnmatched()
             state.firstSelectionIndex = index
             state.tiles[index].isRevealed = true
         } else if let first = state.firstSelectionIndex {
-            // Second selection
             state.secondSelectionIndex = index
             state.tiles[index].isRevealed = true
             moves += 1
             checkMatch(first: first, second: index)
         } else {
-            // First selection
             state.firstSelectionIndex = index
             state.tiles[index].isRevealed = true
         }
@@ -37,8 +40,16 @@ final class TwistViewModel {
             state.firstSelectionIndex = nil
             state.secondSelectionIndex = nil
             
+            if SettingsStore.shared.hapticsEnabled {
+                HapticManager.shared.notification(type: .success)
+            }
+
             if matches == state.tiles.count / 2 {
                 isSolved = true
+            }
+        } else {
+            if SettingsStore.shared.hapticsEnabled {
+                HapticManager.shared.notification(type: .error)
             }
         }
     }
